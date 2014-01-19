@@ -2,7 +2,7 @@ package broker
 
 import (
 	"errors"
-	rh "github.com/michaelklishin/rabbit-hole"
+	"github.com/michaelklishin/rabbit-hole"
 	"net/http"
 )
 
@@ -28,11 +28,11 @@ type options struct {
 }
 
 type rabbitAdmin struct {
-	client *rh.Client
+	client *rabbithole.Client
 }
 
 func newRabbitAdmin(opt options) (*rabbitAdmin, error) {
-	client, err := rh.NewClient(opt.uri, opt.username, opt.password)
+	client, err := rabbithole.NewClient(opt.uri, opt.username, opt.password)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (a *rabbitAdmin) createVhost(vhostname string, tracing bool) error {
 		return errorAlreadyExists
 	}
 
-	settings := rh.VhostSettings{tracing}
+	settings := rabbithole.VhostSettings{tracing}
 	resp, err := a.client.PutVhost(vhostname, settings)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (a *rabbitAdmin) createUser(username, password string) error {
 		return errorAlreadyExists
 	}
 
-	settings := rh.UserSettings{
+	settings := rabbithole.UserSettings{
 		Name:     username,
 		Password: password,
 		Tags:     "management",
@@ -110,7 +110,7 @@ func (a *rabbitAdmin) deleteUser(username string) error {
 }
 
 func (a *rabbitAdmin) grantAllPermissionsIn(username, vhostname string) {
-	unlimited := rh.Permissions{".*", ".*", ".*"}
+	unlimited := rabbithole.Permissions{".*", ".*", ".*"}
 	resp, err := a.client.UpdatePermissionsIn(vhostname, username, unlimited)
 	if err != nil {
 		return err

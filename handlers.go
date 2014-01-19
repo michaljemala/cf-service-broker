@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httputil"
 )
@@ -28,13 +29,30 @@ func (fn handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func catalogHandler(w http.ResponseWriter, r *http.Request) error {
-	return nil
+	if m := r.Method; m == "GET" {
+
+	} else {
+		return errors.New("Unsupported method")
+	}
 }
 
 func provisioningHandler(w http.ResponseWriter, r *http.Request) error {
-	return nil
+	if m := r.Method; m == "PUT" {
+
+	} else if m == "DELETE" {
+
+	} else {
+		return errors.New("Unsupported method")
+	}
 }
 
 func bindingHandler(w http.ResponseWriter, r *http.Request) error {
+	if m := r.Method; m == "PUT" {
+
+	} else if m == "DELETE" {
+
+	} else {
+		return errors.New("Unsupported method")
+	}
 	return nil
 }
