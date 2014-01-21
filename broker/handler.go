@@ -35,7 +35,14 @@ func (h *rabbitHandler) provision(req *http.Request) responseEntity {
 	}
 
 	if url, err := h.broker.Provision(preq); err != nil {
-		return responseEntity{http.StatusConflict, brokerError{err.Error()}}
+		re := responseEntity{value: brokerError{err.Error()}}
+		switch err {
+		case errorAlreadyExists:
+			re.status = http.StatusConflict
+		case errorUnexpectedResponse:
+			re.status = http.StatusInternalServerError
+		}
+		return re
 	} else {
 		return responseEntity{http.StatusCreated, struct {
 			Dashboard_url string

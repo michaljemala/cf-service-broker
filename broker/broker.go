@@ -1,5 +1,12 @@
 package broker
 
+import (
+	"crypto/sha1"
+	"encoding/base64"
+	"fmt"
+	"log"
+)
+
 // The ServiceBroker defines the internal API used by the broker's HTTP endpoints.
 type ServiceBroker interface {
 
@@ -25,11 +32,17 @@ type ServiceBroker interface {
 
 // RabbitMQ Service Broker impl
 type rabbitServiceBroker struct {
+	opts  Options
 	admin *rabbitAdmin
 }
 
-func NewBroker(admin *rabbitAdmin) *rabbitServiceBroker {
-	return &rabbitServiceBroker{admin}
+func NewBroker(opts Options) (*rabbitServiceBroker, error) {
+	url := fmt.Sprintf("http://%v:%v", opts.RabbitHost, opts.RabbitPort)
+	admin, err := NewAdmin(url, opts.RabbitUsername, opts.RabbitPassword)
+	if err != nil {
+		return nil, err
+	}
+	return &rabbitServiceBroker{opts, admin}, nil
 }
 
 func (b *rabbitServiceBroker) Catalog() (Catalog, error) {
@@ -54,7 +67,30 @@ func (b *rabbitServiceBroker) Catalog() (Catalog, error) {
 }
 
 func (b *rabbitServiceBroker) Provision(pr ProvisioningRequest) (string, error) {
-	return "", nil
+	vhost := pr.Id
+	if err := b.admin.createVhost(vhost, false); err != nil {
+		return "", err
+	}
+	log.Printf("Broker: Virtual host created: [%v]", vhost)
+
+	username, password := vhost, generatePassword(vhost)
+	if err := b.admin.createUser(username, password); err != nil {
+		b.admin.deleteVhost(vhost)
+		return "", err
+	}
+	log.Printf("Broker: Management user created: [%v]", username)
+
+	if err := b.admin.grantAllPermissionsIn(username, vhost); err != nil {
+		b.admin.deleteUser(username)
+		b.admin.deleteVhost(vhost)
+		return "", err
+	}
+	log.Printf("Broker: All permissions granted to management user: [%v]", username)
+
+	dashboardUrl := fmt.Sprintf("http://%v:%v/#/login/%v/%v", b.opts.RabbitHost, b.opts.RabbitPort, username, password)
+	log.Printf("Broker: Dasboard URL generated: [%v]", dashboardUrl)
+
+	return dashboardUrl, nil
 }
 
 func (b *rabbitServiceBroker) Deprovision(pr ProvisioningRequest) error {
@@ -68,4 +104,9 @@ func (b *rabbitServiceBroker) Bind(br BindingRequest) (Credentials, string, erro
 
 func (b *rabbitServiceBroker) Unbind(br BindingRequest) error {
 	return nil
+}
+
+func generatePassword(str string) string {
+	hash := sha1.New().Sum([]byte(str))
+	return base64.StdEncoding.EncodeToString(hash)
 }
