@@ -50,7 +50,8 @@ func parseAndProcessOptions() broker.Options {
 	flag.StringVar(&opts.PidFile, "P", "", "")
 
 	flag.StringVar(&opts.RabbitHost, "rabbit-host", "127.0.0.1", "")
-	flag.IntVar(&opts.RabbitPort, "rabbit-port", 15672, "")
+	flag.IntVar(&opts.RabbitPort, "rabbit-port", 5672, "")
+	flag.IntVar(&opts.RabbitMgmtPort, "rabbit-mgmt-port", 15672, "")
 	flag.StringVar(&opts.RabbitUsername, "rabbit-user", "guest", "")
 	flag.StringVar(&opts.RabbitPassword, "rabbit-pass", "guest", "")
 	flag.BoolVar(&opts.RabbitTrace, "R", false, "")
@@ -89,8 +90,9 @@ Broker options:
     -P FILE                         File to store broker's PID to
 
 RabbitMQ options:
-        --rabbit-host HOST          Connect to RabbitMQ server running on HOST (default: 127.0.0.1)
-        --rabbit-port PORT          Connect to RabbitMQ server listening on PORT (default: 15672)
+        --rabbit-host HOST          Hostname of RabbitMQ server (default: 127.0.0.1)
+        --rabbit-port PORT          Port on which RabbitMQ server listens for messages  (default: 5672)
+        --rabbit-mgmt-port PORT     Port on which RabbitMQ server listens for management requests (default: 15672)
         --rabbit-user USERNAME      Username of the RabbitMQ server user with 'administrator' tag assigned (default: guest)
         --rabbit-pass PASSWORD      Password for the USERNAME user (default: guest)
     -R                              Trace the outgoing RabbitMQ server management requests

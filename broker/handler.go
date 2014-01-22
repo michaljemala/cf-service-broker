@@ -74,7 +74,14 @@ func (h *rabbitHandler) bind(req *http.Request) responseEntity {
 	}
 
 	if cred, url, err := h.broker.Bind(breq); err != nil {
-		return responseEntity{http.StatusConflict, struct{}{}}
+		re := responseEntity{value: brokerError{err.Error()}}
+		switch err {
+		case errorAlreadyExists:
+			re.status = http.StatusConflict
+		case errorUnexpectedResponse:
+			re.status = http.StatusInternalServerError
+		}
+		return re
 	} else {
 		return responseEntity{http.StatusCreated, struct {
 			Credentials      interface{}

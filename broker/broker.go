@@ -73,7 +73,7 @@ func (b *rabbitServiceBroker) Provision(pr ProvisioningRequest) (string, error) 
 	}
 	log.Printf("Broker: Virtual host created: [%v]", vhost)
 
-	username, password := vhost, generatePassword(vhost)
+	username, password := generateCredentials(vhost)
 	if err := b.admin.createUser(username, password); err != nil {
 		b.admin.deleteVhost(vhost)
 		return "", err
@@ -87,7 +87,7 @@ func (b *rabbitServiceBroker) Provision(pr ProvisioningRequest) (string, error) 
 	}
 	log.Printf("Broker: All permissions granted to management user: [%v]", username)
 
-	dashboardUrl := fmt.Sprintf("http://%v:%v/#/login/%v/%v", b.opts.RabbitHost, b.opts.RabbitPort, username, password)
+	dashboardUrl := fmt.Sprintf("http://%v:%v/#/login/%v/%v", b.opts.RabbitHost, b.opts.RabbitMgmtPort, username, password)
 	log.Printf("Broker: Dasboard URL generated: [%v]", dashboardUrl)
 
 	return dashboardUrl, nil
@@ -98,15 +98,46 @@ func (b *rabbitServiceBroker) Deprovision(pr ProvisioningRequest) error {
 }
 
 func (b *rabbitServiceBroker) Bind(br BindingRequest) (Credentials, string, error) {
-	return nil, "", nil
+	username, password := generateCredentials(br.Id + br.ServiceId)
+	if err := b.admin.createUser(username, password); err != nil {
+		return nil, "", err
+	}
+	log.Printf("Broker: User created: [%v]", username)
 
+	vhost := br.Id
+	if err := b.admin.grantAllPermissionsIn(username, vhost); err != nil {
+		b.admin.deleteUser(username)
+		return nil, "", err
+	}
+	log.Printf("Broker: All permissions granted for [%v] to user: [%v]", vhost, username)
+
+	amqpUrl := fmt.Sprintf("amqp://%v:%v@%v:%v/%v", username, password, b.opts.RabbitHost, b.opts.RabbitPort, vhost)
+	log.Printf("Broker: AMQP URL generated: [%v]", amqpUrl)
+
+	return Credentials{"uri": amqpUrl}, "", nil
 }
 
 func (b *rabbitServiceBroker) Unbind(br BindingRequest) error {
+	username, _ := generateCredentials(br.Id + br.ServiceId)
+	err := b.admin.deleteUser(username)
+	if err != nil {
+		return err
+	}
+	log.Printf("Broker: User deleted: [%v]", username)
+
+	//TODO:Close existing connections from username
+
 	return nil
 }
 
-func generatePassword(str string) string {
-	hash := sha1.New().Sum([]byte(str))
-	return base64.StdEncoding.EncodeToString(hash)
+func generateCredentials(str string) (string, string) {
+	var hash []byte
+
+	hash = sha1.New().Sum([]byte(str))
+	username := base64.StdEncoding.EncodeToString(hash)
+
+	hash = sha1.New().Sum(hash)
+	password := base64.StdEncoding.EncodeToString(hash)
+
+	return username, password
 }

@@ -57,6 +57,7 @@ type Options struct {
 	// Rabbit Settings
 	RabbitHost     string
 	RabbitPort     int
+	RabbitMgmtPort int
 	RabbitUsername string
 	RabbitPassword string
 	RabbitTrace    bool
