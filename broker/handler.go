@@ -3,104 +3,106 @@ package broker
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
-type brokerError struct {
-	Description string
+var empty struct{} = struct{}{}
+
+type handler struct {
+	brokerService BrokerService
 }
 
-type rabbitHandler struct {
-	broker ServiceBroker
+func newHandler(bs BrokerService) *handler {
+	return &handler{bs}
 }
 
-func NewHandler(b ServiceBroker) *rabbitHandler {
-	return &rabbitHandler{b}
-}
-
-func (h *rabbitHandler) catalog(r *http.Request) responseEntity {
-	if cat, err := h.broker.Catalog(); err != nil {
-		return responseEntity{http.StatusInternalServerError, brokerError{err.Error()}}
+func (h *handler) catalog(r *http.Request) responseEntity {
+	if cat, err := h.brokerService.Catalog(); err != nil {
+		return responseEntity{http.StatusInternalServerError, BrokerError{err.Error()}}
 	} else {
 		return responseEntity{http.StatusOK, cat}
 	}
 }
 
-func (h *rabbitHandler) provision(req *http.Request) responseEntity {
+func (h *handler) provision(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	preq := ProvisioningRequest{Id: vars["iid"]}
+	preq := ProvisioningRequest{Id: vars[instanceId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&preq); err != nil {
-		return responseEntity{http.StatusBadRequest, brokerError{err.Error()}}
+		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
 	}
 
-	if url, err := h.broker.Provision(preq); err != nil {
-		re := responseEntity{value: brokerError{err.Error()}}
-		switch err {
-		case errorAlreadyExists:
-			re.status = http.StatusConflict
-		case errorUnexpectedResponse:
-			re.status = http.StatusInternalServerError
-		}
-		return re
-	} else {
-		return responseEntity{http.StatusCreated, struct {
-			Dashboard_url string
-		}{url}}
+	url, err := h.brokerService.Provision(preq)
+	if err != nil {
+		return handleServiceError(err)
 	}
+
+	return responseEntity{http.StatusCreated, struct {
+		Dashboard_url string
+	}{url}}
 }
 
-func (h *rabbitHandler) deprovision(req *http.Request) responseEntity {
+func (h *handler) deprovision(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	preq := ProvisioningRequest{Id: vars["iid"]}
+	preq := ProvisioningRequest{Id: vars[instanceId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&preq); err != nil {
-		return responseEntity{http.StatusBadRequest, brokerError{err.Error()}}
+		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
 	}
 
-	if err := h.broker.Deprovision(preq); err != nil {
-		return responseEntity{http.StatusNotFound, struct{}{}}
-	} else {
-		return responseEntity{http.StatusOK, struct{}{}}
+	if err := h.brokerService.Deprovision(preq); err != nil {
+		return handleServiceError(err)
 	}
+
+	return responseEntity{http.StatusOK, empty}
 }
 
-func (h *rabbitHandler) bind(req *http.Request) responseEntity {
+func (h *handler) bind(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	breq := BindingRequest{InstanceId: vars["iid"], Id: vars["bid"]}
+	breq := BindingRequest{InstanceId: vars[instanceId], Id: vars[serviceId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&breq); err != nil {
-		return responseEntity{http.StatusBadRequest, brokerError{err.Error()}}
+		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
 	}
 
-	if cred, url, err := h.broker.Bind(breq); err != nil {
-		re := responseEntity{value: brokerError{err.Error()}}
-		switch err {
-		case errorAlreadyExists:
-			re.status = http.StatusConflict
-		case errorUnexpectedResponse:
-			re.status = http.StatusInternalServerError
+	cred, url, err := h.brokerService.Bind(breq)
+	if err != nil {
+		return handleServiceError(err)
+	}
+
+	return responseEntity{http.StatusCreated, struct {
+		Credentials      interface{}
+		Syslog_drain_url string
+	}{cred, url}}
+}
+
+func (h *handler) unbind(req *http.Request) responseEntity {
+	vars := mux.Vars(req)
+	breq := BindingRequest{InstanceId: vars[instanceId], Id: vars[serviceId]}
+
+	if err := json.NewDecoder(req.Body).Decode(&breq); err != nil {
+		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
+	}
+
+	if err := h.brokerService.Unbind(breq); err != nil {
+		return handleServiceError(err)
+	}
+
+	return responseEntity{http.StatusOK, empty}
+}
+
+func handleServiceError(err error) responseEntity {
+	log.Printf("Service error occured: %v", err.Error())
+
+	switch err := err.(type) {
+	case BrokerServiceError:
+		switch err.Code() {
+		case ErrCodeConflict:
+			return responseEntity{http.StatusConflict, empty}
+		case ErrCodeGone:
+			return responseEntity{http.StatusGone, empty}
 		}
-		return re
-	} else {
-		return responseEntity{http.StatusCreated, struct {
-			Credentials      interface{}
-			Syslog_drain_url string
-		}{cred, url}}
 	}
-}
-
-func (h *rabbitHandler) unbind(req *http.Request) responseEntity {
-	vars := mux.Vars(req)
-	breq := BindingRequest{InstanceId: vars["iid"], Id: vars["bid"]}
-
-	if err := json.NewDecoder(req.Body).Decode(&breq); err != nil {
-		return responseEntity{http.StatusBadRequest, brokerError{err.Error()}}
-	}
-
-	if err := h.broker.Unbind(breq); err != nil {
-		return responseEntity{http.StatusNotFound, struct{}{}}
-	} else {
-		return responseEntity{http.StatusOK, struct{}{}}
-	}
+	return responseEntity{http.StatusInternalServerError, BrokerError{err.Error()}}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -12,18 +13,31 @@ import (
 	"strings"
 )
 
+const (
+	apiVersion = "v2"
+	instanceId = "instId"
+	serviceId  = "servId"
+)
+
+var (
+	catalogUrlPattern      = fmt.Sprintf("/%v/catalog", apiVersion)
+	provisioningUrlPattern = fmt.Sprintf("/%v/service_instances/{%v}", apiVersion, instanceId)
+	bindingUrlPattern      = fmt.Sprintf("/%v/service_instances/{%v}/service_bindings/{%v}", apiVersion, instanceId, serviceId)
+)
+
 type router struct {
-	mux *mux.Router // TODO: Replace with own simpler regexp-based mux???
+	opts Options
+	mux  *mux.Router // TODO: Replace with own simpler regexp-based mux???
 }
 
-func NewRouter(h *rabbitHandler) *router {
+func newRouter(o Options, h *handler) *router {
 	mux := mux.NewRouter()
-	mux.Handle("/v2/catalog", reponseHandler(h.catalog)).Methods("GET")
-	mux.Handle("/v2/service_instances/{iid}", reponseHandler(h.provision)).Methods("PUT")
-	mux.Handle("/v2/service_instances/{iid}", reponseHandler(h.deprovision)).Methods("DELETE")
-	mux.Handle("/v2/service_instances/{iid}/service_bindings/{bid}", reponseHandler(h.bind)).Methods("PUT")
-	mux.Handle("/v2/service_instances/{iid}/service_bindings/{bid}", reponseHandler(h.unbind)).Methods("DELETE")
-	return &router{mux}
+	mux.Handle(catalogUrlPattern, reponseHandler(h.catalog)).Methods("GET")
+	mux.Handle(provisioningUrlPattern, reponseHandler(h.provision)).Methods("PUT")
+	mux.Handle(provisioningUrlPattern, reponseHandler(h.deprovision)).Methods("DELETE")
+	mux.Handle(bindingUrlPattern, reponseHandler(h.bind)).Methods("PUT")
+	mux.Handle(bindingUrlPattern, reponseHandler(h.unbind)).Methods("DELETE")
+	return &router{o, mux}
 }
 
 // Log & verify request and then pass it to Gorilla to be dispatched approprietly.
