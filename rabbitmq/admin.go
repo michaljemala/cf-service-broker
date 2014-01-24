@@ -17,7 +17,7 @@ func (e *rabbitAdminError) Code() int {
 	return e.code
 }
 func (e *rabbitAdminError) Error() string {
-	return fmt.Sprintf("%v - %v", e.code, e.err.Error())
+	return fmt.Sprintf("%v: %v", e.code, e.err.Error())
 }
 
 type rabbitAdmin struct {

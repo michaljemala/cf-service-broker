@@ -44,7 +44,7 @@ func (o *Options) configure(fs *flag.FlagSet) {
 }
 
 var UsageStr = `
-Broker options:
+Broker Options:
     -bh, --host HOST                   Bind to HOST address (default: 0.0.0.0)
     -br, --port PORT                   Use PORT (default: 9999)
     -bu, --user USERNAME               User required to authenticate requests (default: admin)

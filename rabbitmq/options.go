@@ -47,7 +47,7 @@ func (o *Options) configure(fs *flag.FlagSet) {
 }
 
 var UsageStr = `
-RabbitMQ broker options:
+RabbitMQ Service Options:
     -c,   --catalog CATALOG            A file to load the RabbitMQ broker's catalog from
     -rh,  --rabbit-host HOST           Hostname of RabbitMQ server (default: 127.0.0.1)
     -rr,  --rabbit-port PORT           Port on which RabbitMQ server listens for messages  (default: 5672)

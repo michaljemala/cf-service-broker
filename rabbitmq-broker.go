@@ -37,6 +37,7 @@ func main() {
 }
 
 func Usage() {
+	fmt.Print(versionStr)
 	fmt.Print(broker.UsageStr)
 	fmt.Print(rabbitmq.UsageStr)
 	fmt.Print(usageStr)
@@ -49,10 +50,12 @@ func Version() {
 
 var (
 	showHelp, showVersion bool
-	versionStr            = fmt.Sprintf("RabbitMQ Service Broker v%v\n", version)
-	usageStr              = fmt.Sprintf(`RabbitMQ Service Broker v%v
-Common options:
+	versionStr            = fmt.Sprintf(`
+RabbitMQ Service Broker v%v
+`, version)
+	usageStr = `
+Common Options:
         --help                         Show this message
         --version                      Show service broker version
-`, version)
+`
 )

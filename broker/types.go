@@ -84,5 +84,5 @@ type Plan struct {
 
 // Other types
 type BrokerError struct {
-	Description string
+	Description string `json:"description"`
 }
