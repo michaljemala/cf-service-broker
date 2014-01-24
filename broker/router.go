@@ -15,14 +15,14 @@ import (
 
 const (
 	apiVersion = "v2"
-	instanceId = "instId"
-	serviceId  = "servId"
+	instanceId = "iid"
+	bindingId  = "bid"
 )
 
 var (
 	catalogUrlPattern      = fmt.Sprintf("/%v/catalog", apiVersion)
 	provisioningUrlPattern = fmt.Sprintf("/%v/service_instances/{%v}", apiVersion, instanceId)
-	bindingUrlPattern      = fmt.Sprintf("/%v/service_instances/{%v}/service_bindings/{%v}", apiVersion, instanceId, serviceId)
+	bindingUrlPattern      = fmt.Sprintf("/%v/service_instances/{%v}/service_bindings/{%v}", apiVersion, instanceId, bindingId)
 )
 
 type router struct {

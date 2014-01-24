@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"cf-service-broker/broker"
+	"bitbucket.org/michaljemala/cf-service-broker/broker"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
@@ -14,7 +14,7 @@ type rabbitService struct {
 	admin *rabbitAdmin
 }
 
-func NewBrokerService(opts Options) (*rabbitService, error) {
+func New(opts Options) (*rabbitService, error) {
 	url := fmt.Sprintf("http://%v:%v", opts.MgmtHost, opts.MgmtPort)
 	adm, err := newRabbitAdmin(url, opts.MgmtUser, opts.MgmtPass)
 	if err != nil {
@@ -24,7 +24,7 @@ func NewBrokerService(opts Options) (*rabbitService, error) {
 }
 
 func (b *rabbitService) Catalog() (broker.Catalog, error) {
-	// TODO: Read catalog from file
+	// TODO: Maybe read catalog from a file
 	return broker.Catalog{
 		Services: []broker.Service{
 			broker.Service{
@@ -46,14 +46,14 @@ func (b *rabbitService) Catalog() (broker.Catalog, error) {
 }
 
 func (b *rabbitService) Provision(pr broker.ProvisioningRequest) (string, error) {
-	vhost := pr.Id
+	vhost := pr.InstanceId
 	if err := b.admin.createVhost(vhost, false); err != nil {
 		return "", err
 	}
 	log.Printf("Service: Virtual host created: [%v]", vhost)
 
 	username := fmt.Sprintf("m-%v", vhost)
-	password := generatePassword(pr.Id)
+	password := generatePassword(vhost)
 	if err := b.admin.createUser(username, password); err != nil {
 		b.admin.deleteVhost(vhost)
 		return "", err
@@ -74,7 +74,7 @@ func (b *rabbitService) Provision(pr broker.ProvisioningRequest) (string, error)
 }
 
 func (b *rabbitService) Deprovision(pr broker.ProvisioningRequest) error {
-	vhost := pr.Id
+	vhost := pr.InstanceId
 	username := fmt.Sprintf("m-%v", vhost)
 	if err := b.admin.deleteUser(username); err != nil {
 		return err
@@ -92,9 +92,9 @@ func (b *rabbitService) Deprovision(pr broker.ProvisioningRequest) error {
 }
 
 func (b *rabbitService) Bind(br broker.BindingRequest) (broker.Credentials, string, error) {
-	vhost := br.Id
+	vhost := br.InstanceId
 	username := fmt.Sprintf("u-%v", vhost)
-	password := generatePassword(br.Id + br.ServiceId)
+	password := generatePassword(vhost + br.BindingId)
 	if err := b.admin.createUser(username, password); err != nil {
 		return nil, "", err
 	}
@@ -104,7 +104,7 @@ func (b *rabbitService) Bind(br broker.BindingRequest) (broker.Credentials, stri
 		b.admin.deleteUser(username)
 		return nil, "", err
 	}
-	log.Printf("Service: All permissions granted for [%v] to user: [%v]", vhost, username)
+	log.Printf("Service: All permissions granted for vhost: [%v] to user: [%v]", vhost, username)
 
 	amqpUrl := fmt.Sprintf("amqp://%v:%v@%v:%v/%v", username, password, b.opts.Host, b.opts.Port, vhost)
 	log.Printf("Service: AMQP URL generated: [%v]", amqpUrl)
@@ -113,7 +113,8 @@ func (b *rabbitService) Bind(br broker.BindingRequest) (broker.Credentials, stri
 }
 
 func (b *rabbitService) Unbind(br broker.BindingRequest) error {
-	username := fmt.Sprintf("u-%v", br.Id)
+	vhost := br.InstanceId
+	username := fmt.Sprintf("u-%v", vhost)
 	err := b.admin.deleteUser(username)
 	if err != nil {
 		return err

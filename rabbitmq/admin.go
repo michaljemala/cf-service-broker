@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"cf-service-broker/broker"
+	"bitbucket.org/michaljemala/cf-service-broker/broker"
 	"errors"
 	"fmt"
 	"github.com/michaelklishin/rabbit-hole"

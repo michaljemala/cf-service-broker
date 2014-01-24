@@ -39,17 +39,17 @@ type BrokerServiceError interface {
 
 // See http://docs.cloudfoundry.com/docs/running/architecture/services/api.html#provisioning
 type ProvisioningRequest struct {
-	Id        string `json:"-"`
-	ServiceId string `json:"service_id"`
-	PlanId    string `json:"plan_id"`
-	OrgId     string `json:"organization_guid"`
-	SpaceId   string `json:"space_guid"`
+	InstanceId string `json:"-"`
+	ServiceId  string `json:"service_id"`
+	PlanId     string `json:"plan_id"`
+	OrgId      string `json:"organization_guid"`
+	SpaceId    string `json:"space_guid"`
 }
 
 // See http://docs.cloudfoundry.com/docs/running/architecture/services/api.html#binding
 type BindingRequest struct {
-	Id         string `json:"-"`
 	InstanceId string `json:"-"`
+	BindingId  string `json:"-"`
 	ServiceId  string `json:"service_id"`
 	PlanId     string `json:"plan_id"`
 	AppId      string `json:"app_guid"`

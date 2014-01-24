@@ -27,7 +27,7 @@ func (h *handler) catalog(r *http.Request) responseEntity {
 
 func (h *handler) provision(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	preq := ProvisioningRequest{Id: vars[instanceId]}
+	preq := ProvisioningRequest{InstanceId: vars[instanceId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&preq); err != nil {
 		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
@@ -39,13 +39,13 @@ func (h *handler) provision(req *http.Request) responseEntity {
 	}
 
 	return responseEntity{http.StatusCreated, struct {
-		Dashboard_url string
+		DashboardUrl string `json:"dashboard_url"`
 	}{url}}
 }
 
 func (h *handler) deprovision(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	preq := ProvisioningRequest{Id: vars[instanceId]}
+	preq := ProvisioningRequest{InstanceId: vars[instanceId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&preq); err != nil {
 		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
@@ -60,7 +60,7 @@ func (h *handler) deprovision(req *http.Request) responseEntity {
 
 func (h *handler) bind(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	breq := BindingRequest{InstanceId: vars[instanceId], Id: vars[serviceId]}
+	breq := BindingRequest{InstanceId: vars[instanceId], BindingId: vars[bindingId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&breq); err != nil {
 		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
@@ -72,14 +72,14 @@ func (h *handler) bind(req *http.Request) responseEntity {
 	}
 
 	return responseEntity{http.StatusCreated, struct {
-		Credentials      interface{}
-		Syslog_drain_url string
+		Credentials    interface{} `json:"credentials"`
+		SyslogDrainUrl string      `json:"syslog_drain_url "`
 	}{cred, url}}
 }
 
 func (h *handler) unbind(req *http.Request) responseEntity {
 	vars := mux.Vars(req)
-	breq := BindingRequest{InstanceId: vars[instanceId], Id: vars[serviceId]}
+	breq := BindingRequest{InstanceId: vars[instanceId], BindingId: vars[bindingId]}
 
 	if err := json.NewDecoder(req.Body).Decode(&breq); err != nil {
 		return responseEntity{http.StatusBadRequest, BrokerError{err.Error()}}
