@@ -2,8 +2,6 @@ package rabbitmq
 
 import (
 	"bitbucket.org/michaljemala/cf-service-broker/broker"
-	"crypto/sha1"
-	"encoding/base64"
 	"fmt"
 	"log"
 )
@@ -53,7 +51,7 @@ func (b *rabbitService) Provision(pr broker.ProvisioningRequest) (string, error)
 	log.Printf("Service: Virtual host created: [%v]", vhost)
 
 	username := fmt.Sprintf("m-%v", vhost)
-	password := generatePassword(vhost)
+	password, _ := broker.RandomPasswordGenerator.GeneratePassword()
 	if err := b.admin.createUser(username, password); err != nil {
 		b.admin.deleteVhost(vhost)
 		return "", err
@@ -93,8 +91,9 @@ func (b *rabbitService) Deprovision(pr broker.ProvisioningRequest) error {
 
 func (b *rabbitService) Bind(br broker.BindingRequest) (broker.Credentials, string, error) {
 	vhost := br.InstanceId
+
 	username := fmt.Sprintf("u-%v", vhost)
-	password := generatePassword(vhost + br.BindingId)
+	password, _ := broker.RandomPasswordGenerator.GeneratePassword()
 	if err := b.admin.createUser(username, password); err != nil {
 		return nil, "", err
 	}
@@ -115,6 +114,9 @@ func (b *rabbitService) Bind(br broker.BindingRequest) (broker.Credentials, stri
 func (b *rabbitService) Unbind(br broker.BindingRequest) error {
 	vhost := br.InstanceId
 	username := fmt.Sprintf("u-%v", vhost)
+
+	log.Printf("Service: Deleting user: [%v]", username)
+
 	err := b.admin.deleteUser(username)
 	if err != nil {
 		return err
@@ -124,10 +126,4 @@ func (b *rabbitService) Unbind(br broker.BindingRequest) error {
 	//TODO:Should close existing connections from user 'username'???
 
 	return nil
-}
-
-func generatePassword(str string) string {
-	hash := sha1.New().Sum([]byte(str))
-	password := base64.StdEncoding.EncodeToString(hash)
-	return password
 }
