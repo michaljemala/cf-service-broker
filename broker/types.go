@@ -1,3 +1,7 @@
+// Copyright 2014, The cf-service-broker Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that
+// can be found in the LICENSE file.
+
 package broker
 
 // The BrokerService defines the internal API used by the broker's HTTP endpoints.
